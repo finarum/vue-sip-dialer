@@ -10,6 +10,29 @@ import DialPad from "./DialPad.vue";
 import BtnGroupActive from "./BtnGroupActive.vue";
 import { useI18n } from "vue-i18n";
 
+const props = defineProps({
+  domain: {
+    type: String,
+    required: true,
+  },
+  ws_servers: {
+    type: String,
+    required: true,
+  },
+  user: {
+    type: String,
+    required: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  displayName: {
+    type: String,
+    default: "User",
+  },
+});
+
 const store = useStore();
 const { t } = useI18n();
 
@@ -35,11 +58,11 @@ const currentTime = ref("");
 // Lifecycle
 onMounted(() => {
   store.dispatch("sip/init", {
-    domain: "testsipcontrol.ikujo.com",
-    ws_servers: "ws://testfswss.ikujo.com:5066",
-    user: "1002",
-    password: "9St6f7u3U4ZK",
-    display_name: "Anvarjon",
+    domain: props.domain,
+    ws_servers: props.ws_servers,
+    user: props.user,
+    password: props.password,
+    display_name: props.displayName,
   });
 
   generatedId.value = Date.now().toString(36);

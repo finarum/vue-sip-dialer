@@ -1,6 +1,6 @@
 {
-  "name": "@anvar-buranov/sip-phone-dial",
-  "version": "1.1.0",
+  "name": "@finarum/sip-phone-dial",
+  "version": "1.0.1",
   "private": false,
   "type": "module",
   "files": [
@@ -20,7 +20,7 @@
     "url": "git+https://github.com/finarum/vue-sip-dialer.git"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "dev": "vite",

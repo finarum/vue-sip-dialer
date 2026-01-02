@@ -1,5 +1,100 @@
-# Vue 3 + TypeScript + Vite
+# @finarum/sip-phone-dial
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A modern, high-quality SIP phone dialer component for Vue 3 applications. Built with JsSIP, Vuex, and Vite.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+![SIP Phone Dialer](https://raw.githubusercontent.com/finarum/vue-sip-dialer/main/screenshot.png) <!-- Note: Replace with actual image if available -->
+
+## Features
+
+- **Vue 3 & TypeScript**: Native support for modern Vue applications.
+- **Glassmorphism Design**: Premium, modern UI with smooth animations.
+- **JsSIP Integration**: Robust SIP handling for reliable VoIP calls.
+- **Component-Based**: Exported as reusable components (`Phone`, `DialPad`, etc.).
+- **I18n Support**: Ready for internationalization.
+
+## Installation
+
+```bash
+npm install @finarum/sip-phone-dial
+```
+
+### Peer Dependencies
+
+Ensure you have the following packages installed in your project:
+
+```bash
+npm install vue vuex jssip vue-i18n
+```
+
+## Setup
+
+### 1. Vuex Store Requirements
+
+The component relies on a specific Vuex module structure. You should register the SIP module in your Vuex store.
+
+```typescript
+import { createStore } from 'vuex';
+// Note: You may need to export the store logic from the package if it's not internal only
+// In the current version, the store logic is bundled.
+```
+
+### 2. Styles
+
+Import the CSS in your main entry file:
+
+```javascript
+import '@finarum/sip-phone-dial/dist/style.css';
+```
+
+## Usage
+
+### Using the `Phone` Component
+
+The `Phone.vue` component provides a complete SIP client UI.
+
+```vue
+<script setup>
+import { Phone } from '@finarum/sip-phone-dial';
+</script>
+
+<template>
+  <Phone 
+    domain="your-sip-domain.com"
+    ws_servers="wss://your-sip-wss-server.com"
+    user="1001"
+    password="your-password"
+    displayName="John Doe"
+  />
+</template>
+```
+
+### API Reference
+
+#### `Phone` Props
+
+| Prop | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `domain` | `String` | Yes | - | Your SIP domain. |
+| `ws_servers` | `String` | Yes | - | WebSocket server URL (e.g., `wss://...`). |
+| `user` | `String` | Yes | - | SIP user extension. |
+| `password` | `String` | Yes | - | SIP password. |
+| `displayName` | `String` | No | `"User"` | Caller ID name. |
+
+## Development
+
+If you want to contribute or modify the package:
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+## License
+
+MIT
