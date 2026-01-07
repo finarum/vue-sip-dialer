@@ -1,89 +1,50 @@
-<script setup>
-import { ref, computed, onMounted, watch } from "vue";
-import { useStore } from "vuex";
-import { useTimer } from "@sipStore/modules/useTimer";
-import { TIME_OUT_CALL } from "@sipStore/modules/sip";
-import IndicatorConnected from "@sipComponent/Indicator/IndicatorConnected.vue";
-import IndicatorRegistered from "@sipComponent/Indicator/IndicatorRegistered.vue";
-import Dropdown from "@sipComponent/Frame/Dropdown.vue";
-import DialPad from "./DialPad.vue";
-import BtnGroupActive from "./BtnGroupActive.vue";
-import { useI18n } from "vue-i18n";
+<script setup lang="ts">
+import { ref, watch } from "vue";
+import { useSipStore } from "./composables/useSipStore";
+import { useTimer } from "./composables/useTimer";
+import DialPad from "./components/DialPad.vue";
+import InfoConnection from "./components/InfoConnection.vue";
 
-const props = defineProps({
-  domain: {
-    type: String,
-    required: true,
-  },
-  ws_servers: {
-    type: String,
-    required: true,
-  },
-  user: {
-    type: String,
-    required: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  displayName: {
-    type: String,
-    default: "User",
-  },
-});
-
-const store = useStore();
-const { t } = useI18n();
-
-// SIP state
-
-const isConnected = computed(() => store.state.sip.isConnected);
-const isRegistered = computed(() => store.state.sip.isRegistered);
-const callStatus = computed(() => store.state.sip.callStatus);
-const activeSession = computed(() => store.state.sip.activeSession);
-const callStatusText = computed(() => store.getters["sip/callStatusText"]);
+// Use the typed SIP store composable - all properties are now fully typed!
+const {
+  callStatus,
+  activeSession,
+  hasActiveSession,
+  isIncomingActive,
+  dispatch,
+  remoteIdentity,
+} = useSipStore();
 
 // Call UI state
+const dialpadInput = ref(""); // Real-time input value from dialpad
 const currentCallNumber = ref("");
 const isMuted = ref(false);
 
 // Timer for call duration
 const callTimer = useTimer(0, 1); // Start at 0 seconds, count up
-const timer_to_call = useTimer(TIME_OUT_CALL / 1000, -1);
+// const timer_to_call = useTimer(TIME_OUT_CALL / 1000, -1); // Uncomment if needed
 
-// Demo data
-const generatedId = ref("");
-const currentTime = ref("");
-// Lifecycle
-onMounted(() => {
-  store.dispatch("sip/init", {
-    domain: props.domain,
-    ws_servers: props.ws_servers,
-    user: props.user,
-    password: props.password,
-    display_name: props.displayName,
-  });
+const handleCall = (number?: string) => {
+  // If there's an incoming call, answer it
+  if (isIncomingActive.value) {
+    currentCallNumber.value = remoteIdentity.value || "Unknown";
+    callTimer.reset();
+    callTimer.start();
+    dispatch("sip/answerCall");
+    return;
+  }
 
-  generatedId.value = Date.now().toString(36);
-  currentTime.value = new Date().toUTCString();
-});
-
-const handleCall = (phone_number) => {
-  currentCallNumber.value = phone_number;
+  // Otherwise, make an outgoing call
+  if (!number) return;
+  currentCallNumber.value = number;
   callTimer.reset();
   callTimer.start();
-  store.dispatch("sip/makeCall", {
-    target: phone_number,
-    domain: "testsipcontrol.ikujo.com",
+  dispatch("sip/makeCall", {
+    target: number,
   });
 };
 
-const handleHangup = () => {
-  store.dispatch("sip/hangup");
-  timer_to_call.reset();
-  timer_to_call.start();
-};
+const handleHangup = () => dispatch("sip/hangup");
 
 watch(callStatus, (newStatus) => {
   if (newStatus === "ended" || newStatus === "failed" || newStatus === "idle") {
@@ -96,129 +57,114 @@ watch(callStatus, (newStatus) => {
   }
 });
 
-const toggleMute = () => {
+watch(dialpadInput, (newValue) => {
+  if (hasActiveSession.value && newValue.length > 0) {
+    const newChar = newValue[newValue.length - 1];
+    if (newChar && /^[0-9*#]$/.test(newChar)) {
+      dispatch("sip/sendDTMF", {
+        tone: newChar,
+      });
+    }
+  }
+});
+
+// Toggle mute is available via this function if needed
+// Usage: expose via template or call directly
+function toggleMute() {
   if (activeSession.value) {
     isMuted.value = !isMuted.value;
-    const sdh = activeSession.value.sessionDescriptionHandler;
+    const sdh = (activeSession.value as any).sessionDescriptionHandler;
     if (sdh?.peerConnection) {
-      sdh.peerConnection.getSenders().forEach((sender) => {
+      sdh.peerConnection.getSenders().forEach((sender: any) => {
         if (sender.track && sender.track.kind === "audio") {
           sender.track.enabled = !isMuted.value;
         }
       });
     }
   }
+}
+
+const handlePause = () => {};
+
+const handleForward = () => {
+  dispatch("sip/referCall", {
+    target: "9001",
+  });
 };
+
+const handleKeyboard = () => {};
+
+const handleCircle = () => {};
+
+const handleUsers = () => {};
+
+const handleMenu = () => {};
+
+const handleMic = () => {};
+
+const handleSettings = () => {};
+
+// Handling for dblLcick
 </script>
 
 <template>
-  <div
-    class="w-min h-min mx-auto mt-14 p-6 py-12 rounded-lg border border-n-weak transition-all duration-300 relative bg-n-background"
-  >
-    <div class="flex items-center gap-3 absolute top-2 left-2">
-      <IndicatorConnected :connected="isConnected" />
-      <IndicatorRegistered v-if="isConnected" :registered="isRegistered" />
-    </div>
-
-    <!-- Dialpad - Show only when idle -->
-    <div v-if="callStatus === 'idle'" class="animate-fadeIn">
-      <DialPad @call="handleCall" />
-      <div class="text-center mt-2 text-xs text-n-slate-11">
-        {{ t("sip.status") }}
-        {{ isConnected ? t("sip.connected") : t("sip.disconnected") }}
-        {{ t("sip.registered") }}
-        {{ isRegistered ? t("sip.yes") : t("sip.no") }}
+  <Transition name="slide-in-br" appear>
+    <div
+      class="w-min h-min mx-auto mt-14 p-6 py-12 pb-16 rounded-lg border border-n-blue-4 transition-all duration-300 relative bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-sm"
+    >
+      <InfoConnection />
+      <!-- Dialpad - Show only when idle -->
+      <div class="animate-fadeIn">
+        <DialPad
+          v-model="dialpadInput"
+          :has-active-session
+          :is-incoming-active
+          :remote-identity
+          @call="handleCall"
+          @hangup="handleHangup"
+          @sip-pause="handlePause"
+          @sip-forward="handleForward"
+          @sip-keyboard="handleKeyboard"
+          @sip-circle="handleCircle"
+          @sip-users="handleUsers"
+          @sip-menu="handleMenu"
+          @sip-mic="handleMic"
+          @sip-settings="handleSettings"
+        />
       </div>
     </div>
-
-    <!-- Active Call UI - Show when calling/ringing/active -->
-    <div v-else class="animate-fadeIn">
-      <div class="w-[280px] mx-auto text-center flex flex-col gap-9">
-        <!-- Call Status Header -->
-        <div class="mb-6">
-          <div class="text-sm text-n-slate-11 uppercase tracking-wide mb-2">
-            {{ t(`sip.${callStatusText}`) }}
-          </div>
-          <div class="text-2xl font-semibold text-n-slate-12 mb-1">
-            {{ currentCallNumber }}
-          </div>
-          <div class="text-sm text-n-slate-11">
-            {{ callTimer.formattedTime }}
-          </div>
-        </div>
-
-        <!-- Animated Call Indicator -->
-        <div class="flex justify-center mb-8">
-          <div class="relative">
-            <!-- Pulsing rings for calling/ringing state -->
-            <div
-              v-if="callStatus === 'calling' || callStatus === 'ringing'"
-              class="absolute inset-0 flex items-center justify-center"
-            >
-              <div
-                class="absolute w-[120px] h-[120px] border-[3px] border-n-blue-9/60 rounded-full animate-ripple"
-              />
-              <div
-                class="absolute w-[120px] h-[120px] border-[3px] border-n-blue-9/60 rounded-full animate-ripple [animation-delay:1s]"
-              />
-            </div>
-
-            <!-- Avatar/Icon -->
-            <div
-              class="relative w-24 h-24 rounded-full flex items-center justify-center text-white text-4xl"
-              :class="callStatus === 'active' ? 'bg-n-teal-9' : 'bg-n-blue-9'"
-            >
-              <span class="i-lucide-phone w-12 h-12" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Call Controls -->
-        <div class="flex justify-center gap-9">
-          <!-- Hang Up Button -->
-          <div class="flex flex-col items-center gap-2">
-            <button
-              class="w-16 h-16 rounded-full hover:bg-n-ruby-10 text-white flex items-center justify-center transition-all active:scale-95 shadow-lg"
-              :title="t('sip.hangUp')"
-              @click="handleHangup"
-            >
-              <span class="i-lucide-phone-off w-8 h-8" />
-            </button>
-            <span
-              v-if="callStatus !== 'calling'"
-              class="text-sm italic text-n-slate-11"
-            >
-              {{ t("sip.toDialpad") }}
-              <span class="text-lg ps-2 pe-1">{{
-                timer_to_call.seconds.value
-              }}</span>
-              {{ t("sip.seconds") }}
-            </span>
-          </div>
-
-          <!-- Mute Button (only during active call) -->
-          <button
-            v-if="callStatus === 'active'"
-            class="w-16 h-16 rounded-full text-white flex items-center justify-center transition-all active:scale-95 shadow-lg"
-            :class="
-              isMuted
-                ? 'bg-n-slate-11 hover:bg-n-slate-12'
-                : 'bg-n-slate-12 hover:bg-n-slate-11'
-            "
-            :title="isMuted ? t('sip.unmute') : t('sip.mute')"
-            @click="toggleMute"
-          >
-            <span
-              :class="isMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
-              class="w-8 h-8"
-            />
-          </button>
-        </div>
-
-        <Dropdown v-if="callStatus === 'active'">
-          <BtnGroupActive />
-        </Dropdown>
-      </div>
-    </div>
-  </div>
+  </Transition>
 </template>
+
+<style scoped>
+/* Slide in from bottom-right animation */
+.slide-in-br-enter-active {
+  animation: slide-in-br 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slide-in-br-leave-active {
+  animation: slide-out-br 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes slide-in-br {
+  from {
+    opacity: 0;
+    transform: translate(100px, 100px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@keyframes slide-out-br {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(100px, 100px) scale(0.8);
+  }
+}
+</style>

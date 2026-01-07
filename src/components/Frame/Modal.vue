@@ -1,5 +1,6 @@
 <script setup>
-import { ref, defineProps } from 'vue';
+import { ref, defineProps, computed } from 'vue';
+import { useStore } from 'vuex';
 
 const props = defineProps({
   class: {
@@ -8,6 +9,8 @@ const props = defineProps({
   },
 });
 
+const store = useStore();
+const isIncomingCall = computed(() => store.state.sip.isIncoming);
 const isOpen = ref(false);
 const modalPosition = ref({
   x: window.innerWidth / 15 || 15,
@@ -17,7 +20,7 @@ const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 
 const open = () => {
-  isOpen.value = false;
+  isOpen.value = true;
 };
 const close = () => {
   isOpen.value = false;
@@ -50,6 +53,7 @@ defineExpose({
   toggle,
   open,
   close,
+  isOpen,
 });
 </script>
 
@@ -58,7 +62,7 @@ defineExpose({
     <slot name="trigger" />
   </div>
   <div
-    v-if="isOpen"
+    v-if="isOpen || isIncomingCall"
     class="fixed z-50"
     :style="{ top: modalPosition.y + 'px', left: modalPosition.x + 'px' }"
     @mousemove="onDrag"
