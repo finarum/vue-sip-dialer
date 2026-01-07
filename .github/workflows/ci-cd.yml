@@ -11,6 +11,7 @@ on:
       - develop
   release:
     types: [created]
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
 
 jobs:
   # Job 1: Install dependencies and cache
