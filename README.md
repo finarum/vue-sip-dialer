@@ -91,9 +91,23 @@ npm install
 # Start development server
 npm run dev
 
+# Type check
+npm run typecheck
+
 # Build for production
 npm run build
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment. See [CI-CD.md](CI-CD.md) for details on:
+
+- Automated testing and type checking
+- Build verification
+- Automatic NPM publishing on releases
+- Setting up required secrets
 
 ## License
 
